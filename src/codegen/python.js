@@ -38,8 +38,11 @@ export function createPythonGenerator(Blockly, cfg) {
     // indentato, a differenza del corpo di se/mentre/per. Non si puo'
     // usare statementToCode (indenta sempre di un livello), quindi si
     // cammina l'albero a mano con blockToCode.
-    const first = block.getInputTargetBlock('BODY');
-    return first ? generator.blockToCode(first) : '';
+    const declFirst = block.getInputTargetBlock('DECLARATIONS');
+    const bodyFirst = block.getInputTargetBlock('BODY');
+    const declCode = declFirst ? generator.blockToCode(declFirst) : '';
+    const bodyCode = bodyFirst ? generator.blockToCode(bodyFirst) : '';
+    return declCode + bodyCode;
   };
 
   gen.forBlock['assign'] = function (block, generator) {

@@ -20,8 +20,10 @@ const blockDefinitions = [
     type: 'program',
     message0: 'INIZIO',
     message1: '%1',
-    args1: [{ type: 'input_statement', name: 'BODY' }],
-    message2: 'FINE',
+    args1: [{ type: 'input_statement', name: 'DECLARATIONS' }],
+    message2: '%1',
+    args2: [{ type: 'input_statement', name: 'BODY' }],
+    message3: 'FINE',
     colour: COLOR_PROGRAM,
   },
 

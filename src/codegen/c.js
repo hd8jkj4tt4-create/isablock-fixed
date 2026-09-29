@@ -64,10 +64,11 @@ export function createCGenerator(Blockly, cfg) {
   };
 
   gen.forBlock['program'] = function (block, generator) {
+    const declsCode = generator.statementToCode(block, 'DECLARATIONS');
     const body = generator.statementToCode(block, 'BODY');
-    // Dichiarazioni: solo variabili scalari effettivamente usate nel corpo
+    // Dichiarazioni automatiche: solo variabili scalari effettivamente usate nel corpo
     // di main, escluse quelle dichiarate esplicitamente con var_decl (le
-    // emette gia') e i parametri delle funzioni (declarati nelle firme).
+    // emette gia' nel codice DECLARATIONS) e i parametri delle funzioni.
     const declaredNames = collectExplicitDeclarations(generator.workspace, 'var_decl');
     const paramNames = collectFunctionParams(generator.workspace);
     const used = Blockly.Variables.allUsedVarModels(generator.workspace).filter(
@@ -79,9 +80,9 @@ export function createCGenerator(Blockly, cfg) {
       if (!byType.has(t.type)) byType.set(t.type, []);
       byType.get(t.type).push(name(m));
     }
-    const decls = [];
+    const autoDecls = [];
     for (const [t, names] of byType) {
-      decls.push(`${generator.INDENT}${t} ${names.join(', ')};\n`);
+      autoDecls.push(`${generator.INDENT}${t} ${names.join(', ')};\n`);
     }
     // Il return finale di main viene apposto solo se il corpo non lo
     // dichiara gia' (es. viene da un import C con "return 0" esplicito):
@@ -89,7 +90,7 @@ export function createCGenerator(Blockly, cfg) {
     // passaggio.
     const lastStmt = lastStatementBlock(block, 'BODY');
     const hasReturn = lastStmt && lastStmt.type === 'return_statement';
-    return `int main(void) {\n${decls.join('')}${body}${hasReturn ? '' : `${generator.INDENT}return 0;\n`}}\n`;
+    return `int main(void) {\n${declsCode}${autoDecls.join('')}${body}${hasReturn ? '' : `${generator.INDENT}return 0;\n`}}\n`;
   };
 
   gen.forBlock['assign'] = function (block, generator) {

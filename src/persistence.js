@@ -66,7 +66,43 @@ export function loadWorkspaceFromFile(Blockly, workspace, file) {
     if (formatVersion > appConfig.fileFormatVersion) {
       throw new FileFormatError('Il file è stato creato con una versione più recente di IsaBlock e non può essere aperto.');
     }
+    // Fino al formato 4 gli array (allora chiamati vettori) salvavano la
+    // dimensione in una mappa a parte (arraySizes), fuori dai blocchi: la
+    // rappresenta ora un blocco vero e proprio, DICHIARA ARRAY, con la
+    // dimensione come suo campo SIZE. Il file vecchio contiene comunque
+    // tutta l'informazione necessaria (quale variabile, quale dimensione):
+    // si ricostruisce il blocco mancante invece di rifiutare il file (visto
+    // che alcuni studenti avevano già lavori salvati con il vecchio
+    // sistema). Un file dello stesso formato ma senza array (es. solo
+    // booleani/testo) non ha niente da migrare: la funzione lo lascia
+    // invariato.
+    migrateOldArrayFormat(state);
     workspace.clear();
     Blockly.serialization.workspaces.load(state, workspace);
   });
+}
+
+// Ricostruisce, per ogni array del vecchio formato, un blocco array_decl
+// con la stessa variabile e la stessa dimensione, e lo inserisce in cima
+// alla zona DECLARATIONS del blocco program (introdotta insieme al blocco
+// DICHIARA: un file vecchio non l'ha mai avuta, quindi non c'è nulla da
+// sovrascrivere). Se il file non usa array (arraySizes assente o vuoto) non
+// fa nulla: la stessa funzione gestisce sia i file da migrare sia quelli
+// che non ne hanno bisogno.
+function migrateOldArrayFormat(state) {
+  const arraySizes = state.arraySizes;
+  if (!arraySizes || Object.keys(arraySizes).length === 0) return;
+  const declareBlocks = Object.entries(arraySizes).map(([variableId, size]) => ({
+    type: 'array_decl',
+    id: `migrato_${variableId}`,
+    fields: { VAR: { id: variableId } },
+    inputs: { SIZE: { block: { type: 'number_literal', fields: { VALUE: size } } } },
+  }));
+  for (let i = 0; i < declareBlocks.length - 1; i++) {
+    declareBlocks[i].next = { block: declareBlocks[i + 1] };
+  }
+  const programBlockState = state.blocks?.blocks?.find((b) => b.type === 'program');
+  if (!programBlockState) return; // file corrotto/inatteso: niente su cui agganciarsi
+  programBlockState.inputs = programBlockState.inputs || {};
+  programBlockState.inputs.DECLARATIONS = { block: declareBlocks[0] };
 }

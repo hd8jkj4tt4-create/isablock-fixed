@@ -15,8 +15,9 @@ export function createPseudocodeGenerator(Blockly, cfg) {
   };
 
   gen.forBlock['program'] = function (block, generator) {
+    const decls = generator.statementToCode(block, 'DECLARATIONS');
     const body = generator.statementToCode(block, 'BODY');
-    return `${cfg.PROGRAM_START}\n${body}${cfg.PROGRAM_END}\n`;
+    return `${cfg.PROGRAM_START}\n${decls}${body}${cfg.PROGRAM_END}\n`;
   };
 
   gen.forBlock['assign'] = function (block, generator) {
